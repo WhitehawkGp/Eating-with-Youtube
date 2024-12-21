@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video with Audio Interrupt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #player-container {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+
+    #player iframe {
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* Disable clicking inside the iframe */
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    #continue-button {
+      display: none;
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #continue-button:hover {
+      background-color: #0056b3;
+    }
+
+    #input-container {
+      text-align: center;
+      color: white;
+    }
+
+    #input-container input {
+      width: 300px;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #input-container button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #input-container button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div id="input-container">
+    <h1>YouTube Video with Interrupt</h1>
+    <input type="text" id="video-url" placeholder="Paste YouTube URL here">
+    <button id="load-video">Load Video</button>
+  </div>
+
+  <div id="player-container">
+    <div id="player"></div>
+  </div>
+
+  <div id="overlay">
+    <h1>Eat</h1>
+    <button id="continue-button">Continue</button>
+  </div>
+
+  <audio id="audio" src="Recording%20(9).m4a"></audio>
+
+  <script>
+    let player;
+    let timer;
+    const overlay = document.getElementById('overlay');
+    const continueButton = document.getElementById('continue-button');
+    const audio = document.getElementById('audio');
+
+    function loadYouTubeAPI() {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: '',
+        playerVars: {
+          fs: 0 // Disable fullscreen button
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    function loadVideo() {
+      const url = document.getElementById('video-url').value;
+      try {
+        const videoId = new URL(url).searchParams.get('v');
+        if (videoId) {
+          document.getElementById('input-container').style.display = 'none';
+          document.getElementById('player-container').style.display = 'block';
+          player.loadVideoById(videoId);
+        } else {
+          throw new Error('Invalid YouTube URL');
+        }
+      } catch (e) {
+        alert('Invalid YouTube URL');
+      }
+    }
+
+    function interruptPlayback() {
+      player.pauseVideo();
+      overlay.style.display = 'flex';
+      audio.play();
+
+      setTimeout(() => {
+        audio.pause();
+        continueButton.style.display = 'block';
+      }, 5000);
+    }
+
+    function continuePlayback() {
+      overlay.style.display = 'none';
+      continueButton.style.display = 'none';
+      player.playVideo();
+
+      startTimer();
+    }
+
+    function startTimer() {
+      clearTimeout(timer);
+      timer = setTimeout(interruptPlayback, 45000);
+    }
+
+    function onPlayerReady(event) {
+      startTimer();
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        startTimer();
+      } else {
+        clearTimeout(timer);
+      }
+    }
+
+    // Handle fullscreen changes
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) {
+        overlay.style.position = 'fixed';
+      } else {
+        overlay.style.position = 'absolute';
+      }
+    });
+
+    document.getElementById('load-video').addEventListener('click', loadVideo);
+    continueButton.addEventListener('click', continuePlayback);
+
+    // Initialize YouTube API
+    loadYouTubeAPI();
+  </script>
+</body>
+</html>
